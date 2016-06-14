@@ -16,3 +16,11 @@ hs_err_pid*
 /server/build/
 .gradle
 build
+vertsockets.ipr
+vertsockets.iws
+Client/gradlew
+Client/gradlew.bat
+Client/gradle/wrapper/gradle-wrapper.properties
+Server/gradlew
+Server/gradlew.bat
+Server/gradle/wrapper/gradle-wrapper.properties
