@@ -25,7 +25,7 @@ public class Instance {
     }
 
     @PreDestroy
-    public void close(){
+    public void close() {
         vertxInstance.close();
     }
 }
