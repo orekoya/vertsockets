@@ -1,5 +1,24 @@
+//
+//
+//jar {
+//    baseName = 'vertsockets'
+//    version = '0.0.1-SNAPSHOT'
+//    manifest {
+//        attributes 'Main-Class': 'io.hyperbuffer.samples.vertsockets.VertsocketsApplication'
+//    }
+//}
+
+
 dependencies {
-    compile('io.vertx:vertx-core:3.2.1')
+    def VERSION = [ADMIN_SERVER: '1.3.3', VERTX: '3.2.1']
+    compile(group: 'io.vertx', name: 'vertx-core', version: VERSION.VERTX)
+    compile(group: 'io.vertx', name: 'vertx-web', version: VERSION.VERTX)
+    compile(group: 'io.vertx', name: 'vertx-hazelcast', version: VERSION.VERTX)
+
+//    compile(group: 'de.codecentric', name: 'spring-boot-admin-server', version: VERSION.ADMIN_SERVER)
+//    compile(group: 'de.codecentric', name: 'spring-boot-admin-server-ui', version: VERSION.ADMIN_SERVER)
+//    compile(group: 'de.codecentric', name: 'spring-boot-admin-server-client', version: VERSION.ADMIN_SERVER)
+//    compile(group: 'org.jolokia', name: 'jolokia-core', version: VERSION.ADMIN_SERVER)
 
     compile('org.springframework.boot:spring-boot-starter-actuator')
     compile('org.springframework.boot:spring-boot-starter-aop')
@@ -8,3 +27,4 @@ dependencies {
     compile('org.springframework.boot:spring-boot-starter-websocket')
 
 }
+

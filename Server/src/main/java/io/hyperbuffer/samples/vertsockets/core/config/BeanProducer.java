@@ -1,11 +1,14 @@
 package io.hyperbuffer.samples.vertsockets.core.config;
 
-import io.hyperbuffer.samples.vertsockets.core.vert.Instance;
+import com.hazelcast.config.Config;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.http.ClientAuth;
-import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,25 +18,33 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class BeanProducer {
 
+    private static final Logger LOG = LoggerFactory.getLogger(BeanProducer.class);
 
     @Bean
-    public VertxOptions getVertxOptions() {
-        return new VertxOptions().setWorkerPoolSize(10).setHAEnabled(true);
-    }
-
-    @Bean
-    public HttpServerOptions getHttpServerOptions() {
+    public HttpServerOptions getHttpServerOptions1(@Value("${http.port.1}") int httpPort) {
         return new HttpServerOptions()
                 .setMaxWebsocketFrameSize(1000000)
                 .setCompressionSupported(true)
-                .setPort(48080)
-                .setHost("0.0.0.0")
-                .setClientAuth(ClientAuth.REQUEST);
+                .setPort(httpPort)
+                .setHost("0.0.0.0");
+    }
+
+
+    @Bean
+    public ClusterManager getClusterManager() {
+        final Config hazelcastConfig = new Config();
+        hazelcastConfig.getNetworkConfig().getJoin().getTcpIpConfig().addMember("127.0.0.1").setEnabled(true);
+        hazelcastConfig.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+
+        return new HazelcastClusterManager(hazelcastConfig);
     }
 
     @Bean
     @Autowired
-    public HttpServer getHttpServer(Instance vertxInstance, HttpServerOptions httpServerOptions) {
-        return vertxInstance.getVertxInstance().createHttpServer(httpServerOptions);
+    public VertxOptions getVertxOptions(ClusterManager clusterManager) {
+        return new VertxOptions()
+                .setClusterManager(clusterManager)
+                .setClustered(true).setQuorumSize(2).setHAGroup("xgroup")
+                .setHAEnabled(true);
     }
 }
