@@ -1,10 +1,8 @@
 package io.hyperbuffer.samples.vertsockets.core;
 
-import com.hazelcast.config.Config;
-import io.hyperbuffer.samples.vertsockets.core.util.HttpServerVerticle;
+import io.hyperbuffer.samples.vertsockets.core.util.ServerVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -29,6 +27,7 @@ public class Initializer implements ApplicationContextAware {
     private VertxOptions vertxOptions;
     private final int port1;
     private final int port2;
+    private static int index = 0;
 
     @Autowired
     public Initializer(VertxOptions vertxOptions, @Value("${http.port.1}") int port1, @Value("${http.port.2}") int port2) throws Exception {
@@ -39,24 +38,24 @@ public class Initializer implements ApplicationContextAware {
 
     @PostConstruct
     public void setup() {
-        createVertxInstance(vertxOptions, 1, port1);
-        createVertxInstance(vertxOptions.setClusterManager(new HazelcastClusterManager(new Config("inst2"))), 2, port2);
+        createVertxInstance(vertxOptions, port1);
+//        createVertxInstance(vertxOptions.setClusterManager(new HazelcastClusterManager(new Config("inst2"))), 2, port2);
     }
 
 
-    private void createVertxInstance(VertxOptions vertxOptions, int index, int port) {
+    private void createVertxInstance(VertxOptions vertxOptions, int port) {
 
-
+        index++;
         LOG.info("Deploying vertx instance {}: {}", index, new Date());
         Vertx.clusteredVertx(vertxOptions, result -> {
             if (result.succeeded()) {
                 Vertx vertx = result.result();
 
                 LOG.info("vertx {} initialized", index);
-                deploy(vertx, port, 2);
+                deploy(vertx, port, 1);
 
             } else {
-                LOG.error("vertx 1 setup failed: {}", result.cause());
+                LOG.error("vertx {} setup failed: {}", index, result.cause());
             }
         });
 
@@ -65,13 +64,14 @@ public class Initializer implements ApplicationContextAware {
 
     private void deploy(Vertx vertx, int port, int verticleCount) {
         for (int count = 0; count < verticleCount; count++) {
-            final HttpServerVerticle httpServerVerticle = new HttpServerVerticle(applicationContext, port);
+            final ServerVerticle serverVerticle = new ServerVerticle(applicationContext, port);
 
-            vertx.deployVerticle(httpServerVerticle, result -> {
+            vertx.deployVerticle(serverVerticle, result -> {
                 if (result.succeeded()) {
                     LOG.info("http server verticle deployed at : {}", new Date());
                 } else {
                     LOG.info("http server verticle failed to deploy at : {}", new Date());
+                    System.out.println(result.cause().toString());
 
                 }
             });

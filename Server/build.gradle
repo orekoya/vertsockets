@@ -14,6 +14,7 @@ dependencies {
     compile(group: 'io.vertx', name: 'vertx-core', version: VERSION.VERTX)
     compile(group: 'io.vertx', name: 'vertx-web', version: VERSION.VERTX)
     compile(group: 'io.vertx', name: 'vertx-hazelcast', version: VERSION.VERTX)
+    compile(group: 'io.vertx', name: 'vertx-stomp', version: '3.3.0')
 
 //    compile(group: 'de.codecentric', name: 'spring-boot-admin-server', version: VERSION.ADMIN_SERVER)
 //    compile(group: 'de.codecentric', name: 'spring-boot-admin-server-ui', version: VERSION.ADMIN_SERVER)
