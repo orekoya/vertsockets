@@ -4,6 +4,7 @@ import com.hazelcast.config.Config;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.spi.cluster.ClusterManager;
+import io.vertx.ext.stomp.StompServerOptions;
 import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,5 +47,14 @@ public class BeanProducer {
                 .setClusterManager(clusterManager)
                 .setClustered(true).setQuorumSize(2).setHAGroup("xgroup")
                 .setHAEnabled(true);
+    }
+
+    @Bean
+    public StompServerOptions getStompServerOptions() {
+        return new StompServerOptions()
+                .setPort(-1)
+                .setHost("0.0.0.0")
+                .setWebsocketBridge(true)
+                .setWebsocketPath("/stomp");
     }
 }
