@@ -4,6 +4,6 @@ dependencies {
 
     compile('io.vertx:vertx-core:3.2.1')
 
-//    compile(group: 'org.springframework.boot', name: 'spring-boot-devtools', version: SPRING_BOOT_VERSION)
+    compile(group: 'org.springframework.boot', name: 'spring-boot-devtools', version: SPRING_BOOT_VERSION)
     compile(group: 'org.springframework.boot', name: 'spring-boot-starter-websocket', version: SPRING_BOOT_VERSION)
 }
