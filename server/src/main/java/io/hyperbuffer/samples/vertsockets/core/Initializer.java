@@ -30,7 +30,9 @@ public class Initializer implements ApplicationContextAware {
     private static int index = 0;
 
     @Autowired
-    public Initializer(VertxOptions vertxOptions, @Value("${http.port.1}") int port1, @Value("${http.port.2}") int port2) throws Exception {
+    public Initializer(VertxOptions vertxOptions,
+                       @Value("${http.port.1}") int port1,
+                       @Value("${http.port.2}") int port2) throws Exception {
         this.vertxOptions = vertxOptions;
         this.port1 = port1;
         this.port2 = port2;
@@ -39,7 +41,6 @@ public class Initializer implements ApplicationContextAware {
     @PostConstruct
     public void setup() {
         createVertxInstance(vertxOptions, port1);
-//        createVertxInstance(vertxOptions.setClusterManager(new HazelcastClusterManager(new Config("inst2"))), 2, port2);
     }
 
 
@@ -52,7 +53,7 @@ public class Initializer implements ApplicationContextAware {
                 Vertx vertx = result.result();
 
                 LOG.info("vertx {} initialized", index);
-                deploy(vertx, port, 1);
+                deploy(vertx, this.applicationContext, port, 2);
 
             } else {
                 LOG.error("vertx {} setup failed: {}", index, result.cause());
@@ -62,8 +63,10 @@ public class Initializer implements ApplicationContextAware {
 
     }
 
-    private void deploy(Vertx vertx, int port, int verticleCount) {
+    private static void deploy(Vertx vertx, ApplicationContext applicationContext, int port, int verticleCount) {
+
         for (int count = 0; count < verticleCount; count++) {
+
             final ServerVerticle serverVerticle = new ServerVerticle(applicationContext, port);
 
             vertx.deployVerticle(serverVerticle, result -> {
@@ -71,11 +74,12 @@ public class Initializer implements ApplicationContextAware {
                     LOG.info("http server verticle deployed at : {}", new Date());
                 } else {
                     LOG.info("http server verticle failed to deploy at : {}", new Date());
-                    System.out.println(result.cause().toString());
+                    if (result.cause() != null) result.cause().printStackTrace();
 
                 }
             });
         }
+
     }
 
 

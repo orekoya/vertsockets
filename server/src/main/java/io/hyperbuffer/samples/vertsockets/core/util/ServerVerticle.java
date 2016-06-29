@@ -7,7 +7,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
-import io.vertx.ext.stomp.*;
+import io.vertx.ext.stomp.Destination;
+import io.vertx.ext.stomp.StompServer;
+import io.vertx.ext.stomp.StompServerHandler;
+import io.vertx.ext.stomp.StompServerOptions;
 import io.vertx.ext.web.Router;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,55 +25,43 @@ import java.util.UUID;
 public class ServerVerticle extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(ServerVerticle.class);
-    private HttpServer httpServer;
+
     private final String identifier;
     private final ApplicationContext applicationContext;
     private final int port;
+    private final StompServerOptions stompServerOptions;
+
+    private HttpServer httpServer;
     private StompServer stompServer;
+
 
     public ServerVerticle(ApplicationContext context, int port) {
         super();
         this.applicationContext = context;
         this.port = port;
+        this.stompServerOptions = applicationContext.getBean(StompServerOptions.class);
         this.identifier = UUID.randomUUID().toString();
     }
 
     @Override
     public void start(Future<Void> startFuture) throws Exception {
         super.start(startFuture);
-        final Router router = Router.router(vertx);
-        router.route(HttpMethod.GET, "/api/ping").handler(event -> {
-            System.out.println(String.format("pinged %s at %s ", event.toString(), new Date()));
-        });
-        router.route(HttpMethod.POST, "/api/connect/").handler(event -> {
-            System.out.println(String.format("connect %s at %s ", event.toString(), new Date()));
-        });
-
-        router.route().handler(routingContext -> {
-            LOG.info("received event at {}: ", new Date());
-            routingContext.response().end("hello there: " + identifier);
-        });
-
-        this.stompServer = createStompServer(vertx);
 
         startFuture.setHandler((AsyncResultHandler<Void>) startEvent -> {
-            this.httpServer = vertx.createHttpServer(applicationContext.getBean(HttpServerOptions.class).setPort(port));
 
             if (startEvent.succeeded()) {
-                httpServer.websocketHandler(webSocketEvent -> {
-                    if (webSocketEvent.headers().isEmpty()) {
-                        LOG.info("received web-scoket event at {}: ", new Date());
-
-                    }
-                });
-
-                httpServer.requestHandler(router::accept).listen((AsyncResultHandler<HttpServer>) event -> {
-                    if (event.succeeded()) {
-                        LOG.info("server verticle with UUID : {} has started http server. details: {}", identifier, event.toString());
-                    } else {
-                        LOG.error("server verticle with UUID : {} failed to start the http server. details: {}", identifier, event.toString());
-                    }
-                });
+                this.stompServer = createStompServer(vertx);
+                this.httpServer = vertx.createHttpServer(applicationContext.getBean(HttpServerOptions.class)
+                        .setPort(port)
+                        .setWebsocketSubProtocols("v10.stomp, v11.stomp"))
+                        .websocketHandler(event -> stompServer.webSocketHandler())
+                        .requestHandler(buildRouter()::accept).listen((AsyncResultHandler<HttpServer>) event -> {
+                            if (event.succeeded()) {
+                                LOG.info("server verticle with UUID : {} has started http server. details: {}", identifier, event.toString());
+                            } else {
+                                LOG.error("server verticle with UUID : {} failed to start the http server. details: {}", identifier, event.toString());
+                            }
+                        });
 
             }
         });
@@ -93,9 +84,28 @@ public class ServerVerticle extends AbstractVerticle {
 
     }
 
+    private Router buildRouter() {
+        final Router router = Router.router(vertx);
+        router.route(HttpMethod.GET, "/api/ping").handler(event -> {
+            String msg = String.format("pinged %s at %s ", event.toString(), new Date());
+            System.out.println(msg);
+            event.response().end(msg);
+        });
+        router.route(HttpMethod.POST, "/api/connect/").handler(event -> {
+            System.out.println(String.format("connect %s at %s ", event.toString(), new Date()));
+        });
+
+        router.route().handler(routingContext -> {
+            LOG.info("received event at {}: ", new Date());
+            routingContext.response().end("hello there: " + identifier);
+        });
+
+        return router;
+    }
+
     private StompServer createStompServer(Vertx vertx) {
 
-        return StompServer.create(vertx)
+        return StompServer.create(vertx, stompServerOptions)
                 .handler(StompServerHandler.create(vertx).destinationFactory((vtx, name) -> {
                     if (name.startsWith("/forbidden")) {
                         return null;
@@ -104,8 +114,19 @@ public class ServerVerticle extends AbstractVerticle {
                     } else {
                         return Destination.topic(vtx, name);
                     }
-                }).beginHandler(new DefaultBeginHandler()).closeHandler(StompServerConnection::close))
-                .listen(-1, "0.0.0.0");
+                }));
     }
 
+
+    public HttpServer getHttpServer() {
+        return httpServer;
+    }
+
+    public StompServer getStompServer() {
+        return stompServer;
+    }
+
+    public String getIdentifier() {
+        return identifier;
+    }
 }
