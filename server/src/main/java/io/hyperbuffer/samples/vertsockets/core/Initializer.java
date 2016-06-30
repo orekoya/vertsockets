@@ -1,8 +1,10 @@
 package io.hyperbuffer.samples.vertsockets.core;
 
+import com.hazelcast.config.Config;
 import io.hyperbuffer.samples.vertsockets.core.util.ServerVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -41,6 +43,7 @@ public class Initializer implements ApplicationContextAware {
     @PostConstruct
     public void setup() {
         createVertxInstance(vertxOptions, port1);
+        createVertxInstance(vertxOptions.setClusterManager(new HazelcastClusterManager(new Config("new Instance"))), port2);
     }
 
 

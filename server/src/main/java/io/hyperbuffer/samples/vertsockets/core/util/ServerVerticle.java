@@ -87,17 +87,15 @@ public class ServerVerticle extends AbstractVerticle {
     private Router buildRouter() {
         final Router router = Router.router(vertx);
         router.route(HttpMethod.GET, "/api/ping").handler(event -> {
-            String msg = String.format("pinged %s at %s ", event.toString(), new Date());
-            System.out.println(msg);
+            String msg = String.format("pinged api with content-type %s at %s ", event.getAcceptableContentType(), new Date());
             event.response().end(msg);
         });
         router.route(HttpMethod.POST, "/api/connect/").handler(event -> {
-            System.out.println(String.format("connect %s at %s ", event.toString(), new Date()));
+            event.response().write(String.format("called api/connect with body %s at %s ", event.getBodyAsString(), new Date()));
         });
 
         router.route().handler(routingContext -> {
-            LOG.info("received event at {}: ", new Date());
-            routingContext.response().end("hello there: " + identifier);
+            routingContext.response().end(String.format("response provided by verticle : %s at %s ", identifier, new Date()));
         });
 
         return router;
@@ -118,15 +116,4 @@ public class ServerVerticle extends AbstractVerticle {
     }
 
 
-    public HttpServer getHttpServer() {
-        return httpServer;
-    }
-
-    public StompServer getStompServer() {
-        return stompServer;
-    }
-
-    public String getIdentifier() {
-        return identifier;
-    }
 }
