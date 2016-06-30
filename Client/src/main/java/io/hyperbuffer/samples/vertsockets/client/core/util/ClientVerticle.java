@@ -3,11 +3,11 @@ package io.hyperbuffer.samples.vertsockets.client.core.util;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResultHandler;
 import io.vertx.core.Future;
-import io.vertx.core.http.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -19,7 +19,6 @@ public class ClientVerticle extends AbstractVerticle {
 
     private final String identifier;
     private final ApplicationContext applicationContext;
-    private HttpClient httpClient;
 
 
     public ClientVerticle(ApplicationContext context) {
@@ -34,8 +33,20 @@ public class ClientVerticle extends AbstractVerticle {
 
         startFuture.setHandler((AsyncResultHandler<Void>) startEvent -> {
             if (startEvent.succeeded()) {
-                this.httpClient = applicationContext.getBean(HttpClient.class);
                 LOG.info("Client verticle {} has started with 1 http client", identifier);
+                final HyperClient pingHyperClient = applicationContext.getBean("original", HyperClient.class);
+                final HyperClient connectHyperClient = applicationContext.getBean("alternate", HyperClient.class);
+
+                Long pingTimerID = vertx.setPeriodic(1, event -> {
+                    makePingRequest(pingHyperClient);
+                });
+                LOG.info("started ping timer with ID: {}", pingTimerID);
+
+                Long connectTimerID = vertx.setPeriodic(100, event -> {
+                    makeConnectRequest(connectHyperClient);
+                });
+                LOG.info("started connect timer with ID: {}", connectTimerID);
+
             }
         });
     }
@@ -43,8 +54,29 @@ public class ClientVerticle extends AbstractVerticle {
     @Override
     public void stop(Future<Void> stopFuture) throws Exception {
         super.stop(stopFuture);
-        stopFuture.setHandler(event -> httpClient.close());
+        stopFuture.setHandler(event -> LOG.info("verticle stopped at : {}", new Date()));
     }
 
 
+    private void makePingRequest(HyperClient hyperClient) {
+        hyperClient.getHttpClient().getNow("/api/ping", event ->
+                LOG.info("ping client [{}] response code : {}, message: {}, headers: {}", hyperClient.getIdentifier()
+                        , event.statusCode()
+                        , event.statusMessage()
+                        , event.headers().size()
+                ));
+    }
+
+    private void makeConnectRequest(HyperClient hyperClient) {
+        hyperClient.getHttpClient().getNow("/api/connect", event ->
+                LOG.info("connect client [{}] response code : {}, message: {}, headers: {}", hyperClient.getIdentifier()
+                        , event.statusCode()
+                        , event.statusMessage()
+                        , event.headers().size()
+                ));
+    }
+
+    private void makeWebSocketRequest(HyperClient hyperClient) {
+
+    }
 }

@@ -1,9 +1,10 @@
 package io.hyperbuffer.samples.vertsockets.client.core.config;
 
+import io.hyperbuffer.samples.vertsockets.client.core.util.HyperClient;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
@@ -27,9 +28,19 @@ public class BeanProducer {
         return Vertx.vertx(new VertxOptions());
     }
 
-    @Bean
+    @Bean(name = "original")
     @Scope("prototype")
-    public HttpClient getHttpClient(Vertx vertx, HttpClientOptions httpClientOptions) {
-        return vertx.createHttpClient(httpClientOptions);
+    @Autowired
+    public HyperClient getHttpClient(Vertx vertx, HttpClientOptions httpClientOptions) {
+        return new HyperClient(vertx.createHttpClient(httpClientOptions));
     }
+
+    @Bean(name = "alternate")
+    @Scope("prototype")
+    @Autowired
+    public HyperClient getHttpClient2(Vertx vertx, HttpClientOptions httpClientOptions) {
+        return new HyperClient(vertx.createHttpClient(httpClientOptions.setDefaultPort(58080)));
+    }
+
+
 }
