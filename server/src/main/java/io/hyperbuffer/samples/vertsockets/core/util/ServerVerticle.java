@@ -86,12 +86,13 @@ public class ServerVerticle extends AbstractVerticle {
 
     private Router buildRouter() {
         final Router router = Router.router(vertx);
+
         router.route(HttpMethod.GET, "/api/ping").handler(event -> {
             String msg = String.format("pinged api with content-type %s at %s ", event.getAcceptableContentType(), new Date());
             event.response().end(msg);
         });
         router.route(HttpMethod.POST, "/api/connect/").handler(event -> {
-            event.response().write(String.format("called api/connect with body %s at %s ", event.getBodyAsString(), new Date()));
+            vertx.setPeriodic(3000, timerEvent -> event.response().write(String.format("called api/connect with body %s at %s ", event.getBodyAsString(), new Date())));
         });
 
         router.route().handler(routingContext -> {

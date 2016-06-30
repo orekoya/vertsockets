@@ -1,14 +1,13 @@
 package io.hyperbuffer.samples.vertsockets.core;
 
-import com.hazelcast.config.Config;
 import io.hyperbuffer.samples.vertsockets.core.util.ServerVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
-import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -26,34 +25,38 @@ public class Initializer implements ApplicationContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(Initializer.class);
     private ApplicationContext applicationContext;
-    private VertxOptions vertxOptions;
+    private final VertxOptions originalVertxOptions;
+    private final VertxOptions alternateVertxOptions;
     private final int port1;
     private final int port2;
     private static int index = 0;
 
     @Autowired
-    public Initializer(VertxOptions vertxOptions,
-                       @Value("${http.port.1}") int port1,
-                       @Value("${http.port.2}") int port2) throws Exception {
-        this.vertxOptions = vertxOptions;
+    public Initializer(
+            @Qualifier("originalOptions") VertxOptions originalVertxOptions,
+            @Qualifier("alternateOptions") VertxOptions alternateVertxOptions,
+            @Value("${http.port.1}") int port1,
+            @Value("${http.port.2}") int port2) throws Exception {
+        this.originalVertxOptions = originalVertxOptions;
+        this.alternateVertxOptions = alternateVertxOptions;
         this.port1 = port1;
         this.port2 = port2;
     }
 
     @PostConstruct
     public void setup() {
-        createVertxInstance(vertxOptions, port1);
-        createVertxInstance(vertxOptions.setClusterManager(new HazelcastClusterManager(new Config("new Instance"))), port2);
+        createVertxInstance(originalVertxOptions, port1);
+        createVertxInstance(alternateVertxOptions, port2);
     }
 
 
     private void createVertxInstance(VertxOptions vertxOptions, int port) {
 
-        index++;
         LOG.info("Deploying vertx instance {}: {}", index, new Date());
         Vertx.clusteredVertx(vertxOptions, result -> {
             if (result.succeeded()) {
                 Vertx vertx = result.result();
+                index++;
 
                 LOG.info("vertx {} initialized", index);
                 deploy(vertx, this.applicationContext, port, 2);
