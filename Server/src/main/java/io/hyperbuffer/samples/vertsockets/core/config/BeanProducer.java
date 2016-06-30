@@ -9,6 +9,7 @@ import io.vertx.spi.cluster.hazelcast.HazelcastClusterManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,21 +32,41 @@ public class BeanProducer {
     }
 
 
-    @Bean
+    @Bean(name = "originalClusterMgr")
     public ClusterManager getClusterManager() {
         final Config hazelcastConfig = new Config();
         hazelcastConfig.getNetworkConfig().getJoin().getTcpIpConfig().addMember("127.0.0.1").setEnabled(true);
         hazelcastConfig.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+        hazelcastConfig.setInstanceName("originalInstance");
 
         return new HazelcastClusterManager(hazelcastConfig);
     }
 
-    @Bean
+    @Bean(name = "alternateClusterMgr")
+    public ClusterManager getAlternateClusterManager() {
+        final Config hazelcastConfig = new Config();
+        hazelcastConfig.getNetworkConfig().getJoin().getTcpIpConfig().addMember("127.0.0.1").setEnabled(true);
+        hazelcastConfig.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
+        hazelcastConfig.setInstanceName("alternateInstance");
+
+        return new HazelcastClusterManager(hazelcastConfig);
+    }
+
+    @Bean(name = "originalOptions")
     @Autowired
-    public VertxOptions getVertxOptions(ClusterManager clusterManager) {
+    public VertxOptions getOriginalVertxOptions(@Qualifier("originalClusterMgr") ClusterManager clusterManager) {
         return new VertxOptions()
                 .setClusterManager(clusterManager)
-                .setClustered(true).setQuorumSize(2).setHAGroup("xgroup")
+                .setClustered(true).setQuorumSize(2).setHAGroup("x-group")
+                .setHAEnabled(true);
+    }
+
+    @Bean(name = "alternateOptions")
+    @Autowired
+    public VertxOptions getAlternateVertxOptions(@Qualifier("alternateClusterMgr") ClusterManager clusterManager) {
+        return new VertxOptions()
+                .setClusterManager(clusterManager)
+                .setClustered(true).setQuorumSize(2).setHAGroup("x-group")
                 .setHAEnabled(true);
     }
 

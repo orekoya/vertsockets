@@ -37,15 +37,13 @@ public class ClientVerticle extends AbstractVerticle {
                 final HyperClient pingHyperClient = applicationContext.getBean("original", HyperClient.class);
                 final HyperClient connectHyperClient = applicationContext.getBean("alternate", HyperClient.class);
 
-                Long pingTimerID = vertx.setPeriodic(1, event -> {
+                Long pingTimerID = vertx.setPeriodic(10000, event -> {
                     makePingRequest(pingHyperClient);
                 });
                 LOG.info("started ping timer with ID: {}", pingTimerID);
 
-                Long connectTimerID = vertx.setPeriodic(100, event -> {
-                    makeConnectRequest(connectHyperClient);
-                });
-                LOG.info("started connect timer with ID: {}", connectTimerID);
+                makeConnectRequest(connectHyperClient);
+                LOG.info("started web-socket connection at {}", new Date());
 
             }
         });
@@ -68,7 +66,7 @@ public class ClientVerticle extends AbstractVerticle {
     }
 
     private void makeConnectRequest(HyperClient hyperClient) {
-        hyperClient.getHttpClient().getNow("/api/connect", event ->
+        hyperClient.getHttpClient().post("/api/connect", event ->
                 LOG.info("connect client [{}] response code : {}, message: {}, headers: {}", hyperClient.getIdentifier()
                         , event.statusCode()
                         , event.statusMessage()
@@ -76,7 +74,4 @@ public class ClientVerticle extends AbstractVerticle {
                 ));
     }
 
-    private void makeWebSocketRequest(HyperClient hyperClient) {
-
-    }
 }
