@@ -46,7 +46,7 @@ public class Initializer implements ApplicationContextAware {
     @PostConstruct
     public void setup() {
         createVertxInstance(originalVertxOptions, port1);
-        createVertxInstance(alternateVertxOptions, port2);
+//        createVertxInstance(alternateVertxOptions, port2);
     }
 
 
@@ -59,7 +59,7 @@ public class Initializer implements ApplicationContextAware {
                 index++;
 
                 LOG.info("vertx {} initialized", index);
-                deploy(vertx, this.applicationContext, port, 2);
+                deploy(vertx, this.applicationContext, port, 1);
 
             } else {
                 LOG.error("vertx {} setup failed: {}", index, result.cause());
@@ -81,7 +81,6 @@ public class Initializer implements ApplicationContextAware {
                 } else {
                     LOG.info("http server verticle failed to deploy at : {}", new Date());
                     if (result.cause() != null) result.cause().printStackTrace();
-
                 }
             });
         }

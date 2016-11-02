@@ -1,9 +1,7 @@
 package io.hyperbuffer.samples.vertsockets.core.util;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResultHandler;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
+import io.vertx.core.*;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -12,9 +10,12 @@ import io.vertx.ext.stomp.StompServer;
 import io.vertx.ext.stomp.StompServerHandler;
 import io.vertx.ext.stomp.StompServerOptions;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.Date;
 import java.util.UUID;
@@ -27,9 +28,9 @@ public class ServerVerticle extends AbstractVerticle {
     private static final Logger LOG = LoggerFactory.getLogger(ServerVerticle.class);
 
     private final String identifier;
-    private final ApplicationContext applicationContext;
     private final int port;
     private final StompServerOptions stompServerOptions;
+    private final HttpServerOptions httpServerOptions;
 
     private HttpServer httpServer;
     private StompServer stompServer;
@@ -37,9 +38,9 @@ public class ServerVerticle extends AbstractVerticle {
 
     public ServerVerticle(ApplicationContext context, int port) {
         super();
-        this.applicationContext = context;
         this.port = port;
-        this.stompServerOptions = applicationContext.getBean(StompServerOptions.class);
+        this.stompServerOptions = context.getBean(StompServerOptions.class);
+        this.httpServerOptions = context.getBean(HttpServerOptions.class);
         this.identifier = UUID.randomUUID().toString();
     }
 
@@ -51,10 +52,15 @@ public class ServerVerticle extends AbstractVerticle {
 
             if (startEvent.succeeded()) {
                 this.stompServer = createStompServer(vertx);
-                this.httpServer = vertx.createHttpServer(applicationContext.getBean(HttpServerOptions.class)
-                        .setPort(port)
-                        .setWebsocketSubProtocols("v10.stomp, v11.stomp"))
-                        .websocketHandler(event -> stompServer.webSocketHandler())
+                this.httpServer = vertx.createHttpServer(httpServerOptions.setPort(port))
+                        .websocketHandler(serverWebSocket -> {
+                            LOG.info("client connected");
+                            vertx.setPeriodic(3000, event -> {
+                                LOG.info("server sending message via ws");
+                                serverWebSocket.writeBinaryMessage(Buffer.buffer("Hello World: {}", new Date().toString()));
+                            });
+                            serverWebSocket.handler(event -> LOG.info("incoming data: {}", event.toString()));
+                        })
                         .requestHandler(buildRouter()::accept).listen((AsyncResultHandler<HttpServer>) event -> {
                             if (event.succeeded()) {
                                 LOG.info("server verticle with UUID : {} has started http server. details: {}", identifier, event.toString());
@@ -87,16 +93,27 @@ public class ServerVerticle extends AbstractVerticle {
     private Router buildRouter() {
         final Router router = Router.router(vertx);
 
+        //this is just a pingable http endpoint
         router.route(HttpMethod.GET, "/api/ping").handler(event -> {
             String msg = String.format("pinged api with content-type %s at %s ", event.getAcceptableContentType(), new Date());
+            LOG.info(msg);
             event.response().end(msg);
         });
-        router.route(HttpMethod.POST, "/api/connect/").handler(event -> {
-            vertx.setPeriodic(3000, timerEvent -> event.response().write(String.format("called api/connect with body %s at %s ", event.getBodyAsString(), new Date())));
+
+        //this is a websocket endpoint
+        router.route(HttpMethod.POST, "/stomp").handler(event -> {
+            final String msg = String.format("called stomp endpoint with body %s at %s ", event.getBodyAsString(), new Date());
+            LOG.info(msg);
+            event.response().write(msg);
+            event.request().upgrade();
+            LOG.info("request upgraded now");
         });
 
-        router.route().handler(routingContext -> {
-            routingContext.response().end(String.format("response provided by verticle : %s at %s ", identifier, new Date()));
+        router.route().failureHandler(new Handler<RoutingContext>() {
+            @Override
+            public void handle(RoutingContext event) {
+                System.out.println(event.request().toString());
+            }
         });
 
         return router;
@@ -105,15 +122,20 @@ public class ServerVerticle extends AbstractVerticle {
     private StompServer createStompServer(Vertx vertx) {
 
         return StompServer.create(vertx, stompServerOptions)
-                .handler(StompServerHandler.create(vertx).destinationFactory((vtx, name) -> {
-                    if (name.startsWith("/forbidden")) {
-                        return null;
-                    } else if (name.startsWith("/queue")) {
-                        return Destination.queue(vtx, name);
-                    } else {
-                        return Destination.topic(vtx, name);
-                    }
-                }));
+                .handler(StompServerHandler.create(vertx)
+                        .destinationFactory((vtx, name) -> {
+                            if (name.startsWith("/forbidden")) {
+                                LOG.info("stomp server path forbidden");
+                                return null;
+                            } else if (name.startsWith("/queue")) {
+                                LOG.info("stomp server path queue: {}", name);
+                                return Destination.queue(vtx, name);
+                            } else {
+                                LOG.info("stomp server path topic: {}", name);
+                                return Destination.topic(vtx, name);
+                            }
+                        }));
+
     }
 
 

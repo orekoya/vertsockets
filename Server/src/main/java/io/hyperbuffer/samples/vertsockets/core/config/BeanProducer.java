@@ -73,8 +73,8 @@ public class BeanProducer {
     @Bean
     public StompServerOptions getStompServerOptions() {
         return new StompServerOptions()
-                .setPort(-1)
-                .setHost("0.0.0.0")
+                .setPort(-1) //defer port setting until later
+                .setHost("127.0.0.1")
                 .setWebsocketBridge(true)
                 .setWebsocketPath("/stomp");
     }

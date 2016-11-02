@@ -1,8 +1,10 @@
 dependencies {
 
     final SPRING_BOOT_VERSION = '1.3.5.RELEASE'
+    final static String version
 
     compile('io.vertx:vertx-core:3.2.1')
+    compile(group: 'io.vertx', name: 'vertx-stomp', version: '3.3.2')
 
     compile(group: 'org.springframework.boot', name: 'spring-boot-devtools', version: SPRING_BOOT_VERSION)
     compile(group: 'org.springframework.boot', name: 'spring-boot-starter-websocket', version: SPRING_BOOT_VERSION)

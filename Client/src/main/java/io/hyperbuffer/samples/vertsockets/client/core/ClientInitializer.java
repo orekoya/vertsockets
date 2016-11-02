@@ -8,16 +8,17 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import java.util.Date;
 
 
 /**
  * @author vorekoya on 18/06/2016.
  */
 @Component
+@Lazy(false)
 public class ClientInitializer implements ApplicationContextAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClientInitializer.class);
@@ -31,10 +32,19 @@ public class ClientInitializer implements ApplicationContextAware {
 
     @PostConstruct
     public void setup() {
-        deploy(vertx, applicationContext, 2);
+        deploy(vertx, applicationContext, 1);
     }
 
-    private static void deploy(Vertx vertx, ApplicationContext applicationContext, int verticleCount) {
+    /**
+     * deploys verticles
+     * id multiple verticles are deployed they are used in a round-robin fashion
+     * this is mostly inconsequential for a client, though
+     *
+     * @param vertx              vertx context
+     * @param applicationContext spring context
+     * @param verticleCount      number of verticles to deploy
+     */
+    private static void deploy(final Vertx vertx, final ApplicationContext applicationContext, final int verticleCount) {
 
         for (int count = 0; count < verticleCount; count++) {
 
@@ -42,9 +52,9 @@ public class ClientInitializer implements ApplicationContextAware {
 
             vertx.deployVerticle(ClientVerticle, result -> {
                 if (result.succeeded()) {
-                    LOG.info("http client verticle deployed at : {}", new Date());
+                    LOG.info("http client verticle deployed ");
                 } else {
-                    LOG.info("http client verticle failed to deploy at : {}", new Date());
+                    LOG.info("http client verticle failed to deploy. {}", result.result());
                     result.cause().printStackTrace();
                 }
             });
